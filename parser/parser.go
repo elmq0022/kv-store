@@ -11,8 +11,8 @@ type Value struct {
 	Array []Value
 }
 
-func Parse(r io.Reader) Value {
+func Parse(r io.Reader) (Value, error) {
 	br := bufio.NewReader(r)
 	_ = br
-	return Value{}
+	return Value{}, nil
 }
