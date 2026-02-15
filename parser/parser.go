@@ -22,7 +22,10 @@ type Value struct {
 }
 
 func Parse(r io.Reader) (Value, error) {
-	br := bufio.NewReader(r)
+	br, ok := r.(*bufio.Reader)
+	if !ok {
+		br = bufio.NewReader(r)
+	}
 	var err error
 
 	bytecode, err := br.ReadByte()
@@ -45,7 +48,7 @@ func Parse(r io.Reader) (Value, error) {
 	case typeArray:
 		val.Array, err = parseArray(br)
 	default:
-		return Value{}, errors.New("bytecode not implemented")
+		return Value{}, errors.New("unknown type prefix: " + string(bytecode))
 	}
 
 	return val, err
@@ -73,11 +76,11 @@ func parseBulkString(br *bufio.Reader) ([]byte, error) {
 	}
 	code, err := br.ReadByte()
 	if code != '\r' || err != nil {
-		return nil, errors.New("nope")
+		return nil, errors.New("expected CRLF after bulk string data")
 	}
 	code, err = br.ReadByte()
 	if code != '\n' || err != nil {
-		return nil, errors.New("nope")
+		return nil, errors.New("expected CRLF after bulk string data")
 	}
 
 	return p, nil
@@ -89,7 +92,7 @@ func readLine(br *bufio.Reader) ([]byte, error) {
 		return nil, err
 	}
 	if len(b) < 2 {
-		return nil, errors.New("bad parse")
+		return nil, errors.New("line too short, missing CRLF")
 	}
 	return b[:len(b)-2], nil
 }
@@ -115,6 +118,9 @@ func parseArray(br *bufio.Reader) ([]Value, error) {
 	vals := make([]Value, n)
 	for i := range n {
 		vals[i], err = Parse(br)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return vals, nil
