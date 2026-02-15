@@ -20,6 +20,10 @@ type Executor struct {
 	storage storage.Storage
 }
 
+func New(s storage.Storage) *Executor {
+	return &Executor{storage: s}
+}
+
 func (e *Executor) Execute(val parser.Value) (parser.Value, error) {
 	if val.Type != parser.TypeArray {
 		return parser.Value{Type: parser.TypeError, Bytes: []byte("ERR expected array")}, nil
