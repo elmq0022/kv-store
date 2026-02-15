@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/elmq0022/kv-store/parser"
+	"github.com/elmq0022/kv-store/internal/parser"
 	"github.com/stretchr/testify/assert"
 )
 
