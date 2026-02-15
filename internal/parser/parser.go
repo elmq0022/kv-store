@@ -15,7 +15,7 @@ const (
 	TypeError        byte = '-'
 
 	maxBulkStringLen = 512 * 1024 * 1024 // 512 MB
-	maxArrayLen      = 1024 * 1024       // 1M elements
+	maxArrayLen      = 100_000           // 1M elements
 	maxLineLen       = 64 * 1024         // 64 KB
 )
 
