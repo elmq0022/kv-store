@@ -37,11 +37,11 @@ func Parse(r io.Reader) (Value, error) {
 	case typeBulkString:
 		val.Bytes, err = parseBulkString(br)
 	case typeSimpleString:
-		val.Bytes, err = parseSimpleString(br)
+		val.Bytes, err = readLine(br)
 	case typeInteger:
-		val.Bytes, err = parseInteger(br)
+		val.Bytes, err = readLine(br)
 	case typeError:
-		val.Bytes, err = parseError(br)
+		val.Bytes, err = readLine(br)
 	case typeArray:
 		val.Array, err = parseArray(br)
 	default:
@@ -52,15 +52,11 @@ func Parse(r io.Reader) (Value, error) {
 }
 
 func parseBulkString(br *bufio.Reader) ([]byte, error) {
-	b, err := br.ReadBytes('\n')
+	b, err := readLine(br)
 	if err != nil {
 		return nil, err
 	}
-	if len(b) < 2 {
-		return nil, errors.New("bad parse")
-	}
 
-	b = b[:len(b)-2]
 	nWant, err := strconv.Atoi(string(b))
 	if err != nil {
 		return nil, err
@@ -87,29 +83,7 @@ func parseBulkString(br *bufio.Reader) ([]byte, error) {
 	return p, nil
 }
 
-func parseSimpleString(br *bufio.Reader) ([]byte, error) {
-	b, err := br.ReadBytes('\n')
-	if err != nil {
-		return nil, err
-	}
-	if len(b) < 2 {
-		return nil, errors.New("bad parse")
-	}
-	return b[:len(b)-2], nil
-}
-
-func parseInteger(br *bufio.Reader) ([]byte, error) {
-	b, err := br.ReadBytes('\n')
-	if err != nil {
-		return nil, err
-	}
-	if len(b) < 2 {
-		return nil, errors.New("bad parse")
-	}
-	return b[:len(b)-2], nil
-}
-
-func parseError(br *bufio.Reader) ([]byte, error) {
+func readLine(br *bufio.Reader) ([]byte, error) {
 	b, err := br.ReadBytes('\n')
 	if err != nil {
 		return nil, err
@@ -121,5 +95,27 @@ func parseError(br *bufio.Reader) ([]byte, error) {
 }
 
 func parseArray(br *bufio.Reader) ([]Value, error) {
-	return nil, nil
+	l, err := readLine(br)
+	if err != nil {
+		return nil, err
+	}
+	n, err := strconv.Atoi(string(l))
+	if err != nil {
+		return nil, err
+	}
+
+	if n == -1 {
+		return []Value{}, nil
+	}
+
+	if n < -1 {
+		return nil, errors.New("invalid int for array size")
+	}
+
+	vals := make([]Value, n)
+	for i := range n {
+		vals[i], err = Parse(br)
+	}
+
+	return vals, nil
 }
