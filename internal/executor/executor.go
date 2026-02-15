@@ -1,7 +1,7 @@
 package executor
 
 import (
-	"errors"
+	"strconv"
 
 	"github.com/elmq0022/kv-store/internal/parser"
 	"github.com/elmq0022/kv-store/internal/storage"
@@ -49,31 +49,67 @@ func (e *Executor) Execute(val parser.Value) (parser.Value, error) {
 }
 
 func (e *Executor) set(args []parser.Value) (parser.Value, error) {
-	return parser.Value{}, nil
+	if len(args) != 2 {
+		return parser.Value{Type: parser.TypeError, Bytes: []byte("ERR wrong number of arguments for 'set' command")}, nil
+	}
+
+	k := string(args[0].Bytes)
+	v := args[1].Bytes
+	if err := e.storage.Set(k, v); err != nil {
+		return parser.Value{}, err
+	}
+	return parser.Value{Type: parser.TypeSimpleString, Bytes: []byte("OK")}, nil
 }
 
 func (e *Executor) get(args []parser.Value) (parser.Value, error) {
-	return parser.Value{}, nil
+	if len(args) != 1 {
+		return parser.Value{Type: parser.TypeError, Bytes: []byte("ERR wrong number of arguments for 'get' command")}, nil
+	}
+	k := string(args[0].Bytes)
+	v, err := e.storage.Get(k)
+	if err != nil {
+		return parser.Value{}, err
+	}
+	return parser.Value{Type: parser.TypeBulkString, Bytes: v}, nil
 }
 
 func (e *Executor) del(args []parser.Value) (parser.Value, error) {
-	return parser.Value{}, nil
+	if len(args) < 1 {
+		return parser.Value{Type: parser.TypeError, Bytes: []byte("ERR wrong number of arguments for 'del' command")}, nil
+	}
+	keys := make([]string, len(args))
+	for i, a := range args {
+		keys[i] = string(a.Bytes)
+	}
+	n, err := e.storage.Del(keys...)
+	if err != nil {
+		return parser.Value{}, err
+	}
+	return parser.Value{Type: parser.TypeInteger, Bytes: []byte(strconv.Itoa(n))}, nil
 }
 
 func (e *Executor) incr(args []parser.Value) (parser.Value, error) {
-	return parser.Value{}, nil
+	if len(args) != 1 {
+		return parser.Value{Type: parser.TypeError, Bytes: []byte("ERR wrong number of arguments for 'incr' command")}, nil
+	}
+	k := string(args[0].Bytes)
+	n, err := e.storage.Incr(k)
+	if err != nil {
+		return parser.Value{}, err
+	}
+	return parser.Value{Type: parser.TypeInteger, Bytes: []byte(strconv.FormatInt(n, 10))}, nil
 }
 
 func (e *Executor) echo(args []parser.Value) (parser.Value, error) {
 	if len(args) != 1 {
-		return parser.Value{}, errors.New("bad command")
+		return parser.Value{Type: parser.TypeError, Bytes: []byte("ERR wrong number of arguments for 'echo' command")}, nil
 	}
 	return args[0], nil
 }
 
 func (e *Executor) ping(args []parser.Value) (parser.Value, error) {
 	if len(args) > 1 {
-		return parser.Value{}, errors.New("bad command")
+		return parser.Value{Type: parser.TypeError, Bytes: []byte("ERR wrong number of arguments for 'ping' command")}, nil
 	}
 	if len(args) > 0 {
 		return parser.Value{
