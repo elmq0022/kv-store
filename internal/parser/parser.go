@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	typeBulkString   byte = '$'
-	typeArray        byte = '*'
-	typeSimpleString byte = '+'
-	typeInteger      byte = ':'
-	typeError        byte = '-'
+	TypeBulkString   byte = '$'
+	TypeArray        byte = '*'
+	TypeSimpleString byte = '+'
+	TypeInteger      byte = ':'
+	TypeError        byte = '-'
 
 	maxBulkStringLen = 512 * 1024 * 1024 // 512 MB
 	maxArrayLen      = 1024 * 1024       // 1M elements
@@ -41,11 +41,11 @@ func Parse(r io.Reader) (Value, error) {
 	val.Type = bytecode
 
 	switch bytecode {
-	case typeBulkString:
+	case TypeBulkString:
 		val.Bytes, err = parseBulkString(br)
-	case typeSimpleString, typeInteger, typeError:
+	case TypeSimpleString, TypeInteger, TypeError:
 		val.Bytes, err = readLine(br)
-	case typeArray:
+	case TypeArray:
 		val.Array, err = parseArray(br)
 	default:
 		return Value{}, errors.New("unknown type prefix: " + string(bytecode))
