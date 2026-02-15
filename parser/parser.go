@@ -69,17 +69,27 @@ func parseBulkString(br *bufio.Reader) ([]byte, error) {
 		return nil, nil
 	}
 
+	if nWant < -1 {
+		return nil, errors.New("invalid length for bulk string")
+	}
+
 	p := make([]byte, nWant)
 	_, err = io.ReadFull(br, p)
 	if err != nil {
 		return nil, err
 	}
 	code, err := br.ReadByte()
-	if code != '\r' || err != nil {
+	if err != nil {
+		return nil, err
+	}
+	if code != '\r' {
 		return nil, errors.New("expected CRLF after bulk string data")
 	}
 	code, err = br.ReadByte()
-	if code != '\n' || err != nil {
+	if err != nil {
+		return nil, err
+	}
+	if code != '\n' {
 		return nil, errors.New("expected CRLF after bulk string data")
 	}
 
@@ -91,8 +101,8 @@ func readLine(br *bufio.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(b) < 2 {
-		return nil, errors.New("line too short, missing CRLF")
+	if len(b) < 2 || b[len(b)-2] != '\r' {
+		return nil, errors.New("expected CRLF line terminator")
 	}
 	return b[:len(b)-2], nil
 }
@@ -108,7 +118,7 @@ func parseArray(br *bufio.Reader) ([]Value, error) {
 	}
 
 	if n == -1 {
-		return []Value{}, nil
+		return nil, nil
 	}
 
 	if n < -1 {
