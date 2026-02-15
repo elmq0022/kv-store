@@ -13,6 +13,10 @@ const (
 	typeSimpleString byte = '+'
 	typeInteger      byte = ':'
 	typeError        byte = '-'
+
+	maxBulkStringLen = 512 * 1024 * 1024 // 512 MB
+	maxArrayLen      = 1024 * 1024       // 1M elements
+	maxLineLen       = 64 * 1024         // 64 KB
 )
 
 type Value struct {
@@ -39,11 +43,7 @@ func Parse(r io.Reader) (Value, error) {
 	switch bytecode {
 	case typeBulkString:
 		val.Bytes, err = parseBulkString(br)
-	case typeSimpleString:
-		val.Bytes, err = readLine(br)
-	case typeInteger:
-		val.Bytes, err = readLine(br)
-	case typeError:
+	case typeSimpleString, typeInteger, typeError:
 		val.Bytes, err = readLine(br)
 	case typeArray:
 		val.Array, err = parseArray(br)
@@ -73,6 +73,10 @@ func parseBulkString(br *bufio.Reader) ([]byte, error) {
 		return nil, errors.New("invalid length for bulk string")
 	}
 
+	if nWant > maxBulkStringLen {
+		return nil, errors.New("bulk string length exceeds maximum")
+	}
+
 	p := make([]byte, nWant)
 	_, err = io.ReadFull(br, p)
 	if err != nil {
@@ -97,14 +101,23 @@ func parseBulkString(br *bufio.Reader) ([]byte, error) {
 }
 
 func readLine(br *bufio.Reader) ([]byte, error) {
-	b, err := br.ReadBytes('\n')
-	if err != nil {
-		return nil, err
+	buf := make([]byte, 0, 64)
+	for {
+		b, err := br.ReadByte()
+		if err != nil {
+			return nil, err
+		}
+		if b == '\n' {
+			if len(buf) == 0 || buf[len(buf)-1] != '\r' {
+				return nil, errors.New("expected CRLF line terminator")
+			}
+			return buf[:len(buf)-1], nil
+		}
+		buf = append(buf, b)
+		if len(buf) > maxLineLen {
+			return nil, errors.New("line length exceeds maximum")
+		}
 	}
-	if len(b) < 2 || b[len(b)-2] != '\r' {
-		return nil, errors.New("expected CRLF line terminator")
-	}
-	return b[:len(b)-2], nil
 }
 
 func parseArray(br *bufio.Reader) ([]Value, error) {
@@ -123,6 +136,10 @@ func parseArray(br *bufio.Reader) ([]Value, error) {
 
 	if n < -1 {
 		return nil, errors.New("invalid int for array size")
+	}
+
+	if n > maxArrayLen {
+		return nil, errors.New("array size exceeds maximum")
 	}
 
 	vals := make([]Value, n)

@@ -2,6 +2,7 @@ package parser_test
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/elmq0022/kv-store/parser"
@@ -112,6 +113,60 @@ func TestParser(t *testing.T) {
 				t.Fatal(err)
 			}
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestParserErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		msg     []byte
+		wantErr string
+	}{
+		{
+			name:    "unknown type prefix",
+			msg:     []byte("!invalid\r\n"),
+			wantErr: "unknown type prefix: !",
+		},
+		{
+			name:    "bulk string truncated data",
+			msg:     []byte("$10\r\nhello\r\n"),
+			wantErr: "unexpected EOF",
+		},
+		{
+			name:    "bulk string negative length",
+			msg:     []byte("$-2\r\n"),
+			wantErr: "invalid length for bulk string",
+		},
+		{
+			name:    "array negative size",
+			msg:     []byte("*-2\r\n"),
+			wantErr: "invalid int for array size",
+		},
+		{
+			name:    "missing CRLF terminator",
+			msg:     []byte("+OK\n"),
+			wantErr: "expected CRLF line terminator",
+		},
+		{
+			name:    "null array",
+			msg:     []byte("*-1\r\n"),
+			wantErr: "",
+		},
+		{
+			name:    "line exceeds max length",
+			msg:     []byte("+" + strings.Repeat("a", 65*1024) + "\r\n"),
+			wantErr: "line length exceeds maximum",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parser.Parse(bytes.NewReader(tt.msg))
+			if tt.wantErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.wantErr)
+			}
 		})
 	}
 }
