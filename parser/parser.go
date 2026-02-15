@@ -99,11 +99,25 @@ func parseSimpleString(br *bufio.Reader) ([]byte, error) {
 }
 
 func parseInteger(br *bufio.Reader) ([]byte, error) {
-	return nil, nil
+	b, err := br.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if len(b) < 2 {
+		return nil, errors.New("bad parse")
+	}
+	return b[:len(b)-2], nil
 }
 
 func parseError(br *bufio.Reader) ([]byte, error) {
-	return nil, nil
+	b, err := br.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	if len(b) < 2 {
+		return nil, errors.New("bad parse")
+	}
+	return b[:len(b)-2], nil
 }
 
 func parseArray(br *bufio.Reader) ([]Value, error) {
