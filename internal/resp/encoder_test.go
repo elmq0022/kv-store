@@ -281,7 +281,7 @@ func TestEncoderParserRoundtrip(t *testing.T) {
 			err := enc.Encode(tt.value)
 			require.NoError(t, err)
 
-			got, err := resp.Parse(&buf)
+			got, err := resp.NewDecoder(&buf).Decode()
 			require.NoError(t, err)
 			assert.Equal(t, tt.value, got)
 		})
@@ -308,7 +308,7 @@ func TestParseEncodeRoundtrip(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsed, err := resp.Parse(bytes.NewReader([]byte(tt.raw)))
+			parsed, err := resp.NewDecoder(bytes.NewReader([]byte(tt.raw))).Decode()
 			require.NoError(t, err)
 
 			var buf bytes.Buffer

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParser(t *testing.T) {
+func TestDecoder(t *testing.T) {
 	tests := []struct {
 		name string
 		msg  []byte
@@ -108,7 +108,7 @@ func TestParser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := resp.Parse(bytes.NewReader(tt.msg))
+			got, err := resp.NewDecoder(bytes.NewReader(tt.msg)).Decode()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -161,7 +161,7 @@ func TestParserErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := resp.Parse(bytes.NewReader(tt.msg))
+			_, err := resp.NewDecoder(bytes.NewReader(tt.msg)).Decode()
 			if tt.wantErr == "" {
 				assert.NoError(t, err)
 			} else {

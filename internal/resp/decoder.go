@@ -25,14 +25,22 @@ type Value struct {
 	Array []Value
 }
 
-func Parse(r io.Reader) (Value, error) {
+type Decoder struct {
+	reader *bufio.Reader
+}
+
+func NewDecoder(r io.Reader) *Decoder {
 	br, ok := r.(*bufio.Reader)
 	if !ok {
 		br = bufio.NewReader(r)
 	}
-	var err error
+	return &Decoder{
+		reader: br,
+	}
+}
 
-	bytecode, err := br.ReadByte()
+func (p *Decoder) Decode() (Value, error) {
+	bytecode, err := p.reader.ReadByte()
 	if err != nil {
 		return Value{}, err
 	}
@@ -42,11 +50,11 @@ func Parse(r io.Reader) (Value, error) {
 
 	switch bytecode {
 	case TypeBulkString:
-		val.Bytes, err = parseBulkString(br)
+		val.Bytes, err = p.parseBulkString()
 	case TypeSimpleString, TypeInteger, TypeError:
-		val.Bytes, err = readLine(br)
+		val.Bytes, err = p.readLine()
 	case TypeArray:
-		val.Array, err = parseArray(br)
+		val.Array, err = p.parseArray()
 	default:
 		return Value{}, errors.New("unknown type prefix: " + string(bytecode))
 	}
@@ -54,8 +62,8 @@ func Parse(r io.Reader) (Value, error) {
 	return val, err
 }
 
-func parseBulkString(br *bufio.Reader) ([]byte, error) {
-	b, err := readLine(br)
+func (p *Decoder) parseBulkString() ([]byte, error) {
+	b, err := p.readLine()
 	if err != nil {
 		return nil, err
 	}
@@ -77,19 +85,19 @@ func parseBulkString(br *bufio.Reader) ([]byte, error) {
 		return nil, errors.New("bulk string length exceeds maximum")
 	}
 
-	p := make([]byte, nWant)
-	_, err = io.ReadFull(br, p)
+	buf := make([]byte, nWant)
+	_, err = io.ReadFull(p.reader, buf)
 	if err != nil {
 		return nil, err
 	}
-	code, err := br.ReadByte()
+	code, err := p.reader.ReadByte()
 	if err != nil {
 		return nil, err
 	}
 	if code != '\r' {
 		return nil, errors.New("expected CRLF after bulk string data")
 	}
-	code, err = br.ReadByte()
+	code, err = p.reader.ReadByte()
 	if err != nil {
 		return nil, err
 	}
@@ -97,13 +105,13 @@ func parseBulkString(br *bufio.Reader) ([]byte, error) {
 		return nil, errors.New("expected CRLF after bulk string data")
 	}
 
-	return p, nil
+	return buf, nil
 }
 
-func readLine(br *bufio.Reader) ([]byte, error) {
+func (p *Decoder) readLine() ([]byte, error) {
 	buf := make([]byte, 0, 64)
 	for {
-		b, err := br.ReadByte()
+		b, err := p.reader.ReadByte()
 		if err != nil {
 			return nil, err
 		}
@@ -120,8 +128,8 @@ func readLine(br *bufio.Reader) ([]byte, error) {
 	}
 }
 
-func parseArray(br *bufio.Reader) ([]Value, error) {
-	l, err := readLine(br)
+func (p *Decoder) parseArray() ([]Value, error) {
+	l, err := p.readLine()
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +152,7 @@ func parseArray(br *bufio.Reader) ([]Value, error) {
 
 	vals := make([]Value, n)
 	for i := range n {
-		vals[i], err = Parse(br)
+		vals[i], err = p.Decode()
 		if err != nil {
 			return nil, err
 		}
