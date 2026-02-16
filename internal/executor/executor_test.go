@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/elmq0022/kv-store/internal/executor"
-	"github.com/elmq0022/kv-store/internal/parser"
+	"github.com/elmq0022/kv-store/internal/resp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,22 +54,22 @@ func (s *spyStorage) Incr(k string) (int64, error) {
 	return s.incrVal, s.incrErr
 }
 
-// helpers to build parser.Value inputs
-func cmd(args ...string) parser.Value {
-	vals := make([]parser.Value, len(args))
+// helpers to build resp.Value inputs
+func cmd(args ...string) resp.Value {
+	vals := make([]resp.Value, len(args))
 	for i, a := range args {
-		vals[i] = parser.Value{Type: parser.TypeBulkString, Bytes: []byte(a)}
+		vals[i] = resp.Value{Type: resp.TypeBulkString, Bytes: []byte(a)}
 	}
-	return parser.Value{Type: parser.TypeArray, Array: vals}
+	return resp.Value{Type: resp.TypeArray, Array: vals}
 }
 
 func TestExecute_NonArrayInput(t *testing.T) {
 	spy := &spyStorage{}
 	e := executor.New(spy)
 
-	got, err := e.Execute(parser.Value{Type: parser.TypeBulkString, Bytes: []byte("hello")})
+	got, err := e.Execute(resp.Value{Type: resp.TypeBulkString, Bytes: []byte("hello")})
 	require.NoError(t, err)
-	assert.Equal(t, parser.TypeError, got.Type)
+	assert.Equal(t, resp.TypeError, got.Type)
 	assert.Equal(t, "ERR expected array", string(got.Bytes))
 	assert.Empty(t, spy.calls)
 }
@@ -78,9 +78,9 @@ func TestExecute_EmptyArray(t *testing.T) {
 	spy := &spyStorage{}
 	e := executor.New(spy)
 
-	got, err := e.Execute(parser.Value{Type: parser.TypeArray, Array: []parser.Value{}})
+	got, err := e.Execute(resp.Value{Type: resp.TypeArray, Array: []resp.Value{}})
 	require.NoError(t, err)
-	assert.Equal(t, parser.TypeError, got.Type)
+	assert.Equal(t, resp.TypeError, got.Type)
 	assert.Equal(t, "ERR empty command", string(got.Bytes))
 	assert.Empty(t, spy.calls)
 }
@@ -91,7 +91,7 @@ func TestExecute_UnknownCommand(t *testing.T) {
 
 	got, err := e.Execute(cmd("foobar"))
 	require.NoError(t, err)
-	assert.Equal(t, parser.TypeError, got.Type)
+	assert.Equal(t, resp.TypeError, got.Type)
 	assert.Contains(t, string(got.Bytes), "ERR unknown command 'foobar'")
 	assert.Empty(t, spy.calls)
 }
@@ -103,21 +103,21 @@ func TestPing(t *testing.T) {
 	t.Run("no args", func(t *testing.T) {
 		got, err := e.Execute(cmd("ping"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeSimpleString, got.Type)
+		assert.Equal(t, resp.TypeSimpleString, got.Type)
 		assert.Equal(t, "pong", string(got.Bytes))
 	})
 
 	t.Run("with message", func(t *testing.T) {
 		got, err := e.Execute(cmd("ping", "hello"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeBulkString, got.Type)
+		assert.Equal(t, resp.TypeBulkString, got.Type)
 		assert.Equal(t, "hello", string(got.Bytes))
 	})
 
 	t.Run("too many args", func(t *testing.T) {
 		got, err := e.Execute(cmd("ping", "a", "b"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeError, got.Type)
+		assert.Equal(t, resp.TypeError, got.Type)
 	})
 
 	assert.Empty(t, spy.calls, "ping should not touch storage")
@@ -136,7 +136,7 @@ func TestEcho(t *testing.T) {
 	t.Run("wrong arg count", func(t *testing.T) {
 		got, err := e.Execute(cmd("echo"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeError, got.Type)
+		assert.Equal(t, resp.TypeError, got.Type)
 	})
 
 	assert.Empty(t, spy.calls, "echo should not touch storage")
@@ -149,7 +149,7 @@ func TestSet(t *testing.T) {
 
 		got, err := e.Execute(cmd("set", "mykey", "myval"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeSimpleString, got.Type)
+		assert.Equal(t, resp.TypeSimpleString, got.Type)
 		assert.Equal(t, "OK", string(got.Bytes))
 
 		require.Len(t, spy.calls, 1)
@@ -172,7 +172,7 @@ func TestSet(t *testing.T) {
 
 		got, err := e.Execute(cmd("set", "onlykey"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeError, got.Type)
+		assert.Equal(t, resp.TypeError, got.Type)
 		assert.Empty(t, spy.calls)
 	})
 }
@@ -184,7 +184,7 @@ func TestGet(t *testing.T) {
 
 		got, err := e.Execute(cmd("get", "mykey"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeBulkString, got.Type)
+		assert.Equal(t, resp.TypeBulkString, got.Type)
 		assert.Equal(t, "thevalue", string(got.Bytes))
 
 		require.Len(t, spy.calls, 1)
@@ -206,7 +206,7 @@ func TestGet(t *testing.T) {
 
 		got, err := e.Execute(cmd("get"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeError, got.Type)
+		assert.Equal(t, resp.TypeError, got.Type)
 		assert.Empty(t, spy.calls)
 	})
 }
@@ -218,7 +218,7 @@ func TestDel(t *testing.T) {
 
 		got, err := e.Execute(cmd("del", "k1"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeInteger, got.Type)
+		assert.Equal(t, resp.TypeInteger, got.Type)
 		assert.Equal(t, "1", string(got.Bytes))
 
 		require.Len(t, spy.calls, 1)
@@ -252,7 +252,7 @@ func TestDel(t *testing.T) {
 
 		got, err := e.Execute(cmd("del"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeError, got.Type)
+		assert.Equal(t, resp.TypeError, got.Type)
 		assert.Empty(t, spy.calls)
 	})
 }
@@ -264,7 +264,7 @@ func TestIncr(t *testing.T) {
 
 		got, err := e.Execute(cmd("incr", "counter"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeInteger, got.Type)
+		assert.Equal(t, resp.TypeInteger, got.Type)
 		assert.Equal(t, "42", string(got.Bytes))
 
 		require.Len(t, spy.calls, 1)
@@ -286,7 +286,7 @@ func TestIncr(t *testing.T) {
 
 		got, err := e.Execute(cmd("incr"))
 		require.NoError(t, err)
-		assert.Equal(t, parser.TypeError, got.Type)
+		assert.Equal(t, resp.TypeError, got.Type)
 		assert.Empty(t, spy.calls)
 	})
 }

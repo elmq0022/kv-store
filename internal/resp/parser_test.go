@@ -1,11 +1,11 @@
-package parser_test
+package resp_test
 
 import (
 	"bytes"
 	"strings"
 	"testing"
 
-	"github.com/elmq0022/kv-store/internal/parser"
+	"github.com/elmq0022/kv-store/internal/resp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,12 +13,12 @@ func TestParser(t *testing.T) {
 	tests := []struct {
 		name string
 		msg  []byte
-		want parser.Value
+		want resp.Value
 	}{
 		{
 			name: "null bulk string",
 			msg:  []byte("$-1\r\n"),
-			want: parser.Value{
+			want: resp.Value{
 				Type:  '$',
 				Bytes: nil,
 				Array: nil,
@@ -27,10 +27,10 @@ func TestParser(t *testing.T) {
 		{
 			name: "ping",
 			msg:  []byte("*1\r\n$4\r\nping\r\n"),
-			want: parser.Value{
+			want: resp.Value{
 				Type:  '*',
 				Bytes: nil,
-				Array: []parser.Value{
+				Array: []resp.Value{
 					{
 						Type:  '$',
 						Bytes: []byte("ping"),
@@ -41,10 +41,10 @@ func TestParser(t *testing.T) {
 		{
 			name: "echo hello world",
 			msg:  []byte("*2\r\n$4\r\necho\r\n$11\r\nhello world\r\n"),
-			want: parser.Value{
+			want: resp.Value{
 				Type:  '*',
 				Bytes: nil,
-				Array: []parser.Value{
+				Array: []resp.Value{
 					{Type: '$', Bytes: []byte("echo")},
 					{Type: '$', Bytes: []byte("hello world")},
 				},
@@ -53,10 +53,10 @@ func TestParser(t *testing.T) {
 		{
 			name: "get key",
 			msg:  []byte("*2\r\n$3\r\nget\r\n$3\r\nkey\r\n"),
-			want: parser.Value{
+			want: resp.Value{
 				Type:  '*',
 				Bytes: nil,
-				Array: []parser.Value{
+				Array: []resp.Value{
 					{Type: '$', Bytes: []byte("get")},
 					{Type: '$', Bytes: []byte("key")},
 				},
@@ -65,7 +65,7 @@ func TestParser(t *testing.T) {
 		{
 			name: "simple string",
 			msg:  []byte("+OK\r\n"),
-			want: parser.Value{
+			want: resp.Value{
 				Type:  '+',
 				Bytes: []byte("OK"),
 				Array: nil,
@@ -74,7 +74,7 @@ func TestParser(t *testing.T) {
 		{
 			name: "simple error message",
 			msg:  []byte("-Error message\r\n"),
-			want: parser.Value{
+			want: resp.Value{
 				Type:  '-',
 				Bytes: []byte("Error message"),
 				Array: nil,
@@ -83,7 +83,7 @@ func TestParser(t *testing.T) {
 		{
 			name: "bulk empty string",
 			msg:  []byte("$0\r\n\r\n"),
-			want: parser.Value{
+			want: resp.Value{
 				Type:  '$',
 				Bytes: []byte(""),
 				Array: nil,
@@ -92,7 +92,7 @@ func TestParser(t *testing.T) {
 		{
 			name: "simple string hello world",
 			msg:  []byte("+hello world\r\n"),
-			want: parser.Value{
+			want: resp.Value{
 				Type:  '+',
 				Bytes: []byte("hello world"),
 			},
@@ -100,7 +100,7 @@ func TestParser(t *testing.T) {
 		{
 			name: "integer",
 			msg:  []byte(":42\r\n"),
-			want: parser.Value{
+			want: resp.Value{
 				Type:  ':',
 				Bytes: []byte("42"),
 			},
@@ -108,7 +108,7 @@ func TestParser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parser.Parse(bytes.NewReader(tt.msg))
+			got, err := resp.Parse(bytes.NewReader(tt.msg))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -161,7 +161,7 @@ func TestParserErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parser.Parse(bytes.NewReader(tt.msg))
+			_, err := resp.Parse(bytes.NewReader(tt.msg))
 			if tt.wantErr == "" {
 				assert.NoError(t, err)
 			} else {
