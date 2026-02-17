@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	var s storage.Storage = storage.NewInMemoryStorage()
+	var s storage.Storage = storage.NewInMemoryShardedStorage()
 	var exe = executor.NewExecutor(s)
 
 	ln, err := net.Listen("tcp", ":6379")

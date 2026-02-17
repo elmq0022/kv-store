@@ -2,6 +2,7 @@ package executor
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/elmq0022/kv-store/internal/resp"
 	"github.com/elmq0022/kv-store/internal/storage"
@@ -34,7 +35,7 @@ func (e *Executor) Execute(val resp.Value) (resp.Value, error) {
 
 	cmd := val.Array[0].Bytes
 
-	switch string(cmd) {
+	switch strings.ToLower(string(cmd)) {
 	case cmdSet:
 		return e.set(val.Array[1:])
 	case cmdGet:
