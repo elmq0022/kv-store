@@ -65,7 +65,7 @@ func cmd(args ...string) resp.Value {
 
 func TestExecute_NonArrayInput(t *testing.T) {
 	spy := &spyStorage{}
-	e := executor.New(spy)
+	e := executor.NewExecutor(spy)
 
 	got, err := e.Execute(resp.Value{Type: resp.TypeBulkString, Bytes: []byte("hello")})
 	require.NoError(t, err)
@@ -76,7 +76,7 @@ func TestExecute_NonArrayInput(t *testing.T) {
 
 func TestExecute_EmptyArray(t *testing.T) {
 	spy := &spyStorage{}
-	e := executor.New(spy)
+	e := executor.NewExecutor(spy)
 
 	got, err := e.Execute(resp.Value{Type: resp.TypeArray, Array: []resp.Value{}})
 	require.NoError(t, err)
@@ -87,7 +87,7 @@ func TestExecute_EmptyArray(t *testing.T) {
 
 func TestExecute_UnknownCommand(t *testing.T) {
 	spy := &spyStorage{}
-	e := executor.New(spy)
+	e := executor.NewExecutor(spy)
 
 	got, err := e.Execute(cmd("foobar"))
 	require.NoError(t, err)
@@ -98,7 +98,7 @@ func TestExecute_UnknownCommand(t *testing.T) {
 
 func TestPing(t *testing.T) {
 	spy := &spyStorage{}
-	e := executor.New(spy)
+	e := executor.NewExecutor(spy)
 
 	t.Run("no args", func(t *testing.T) {
 		got, err := e.Execute(cmd("ping"))
@@ -125,7 +125,7 @@ func TestPing(t *testing.T) {
 
 func TestEcho(t *testing.T) {
 	spy := &spyStorage{}
-	e := executor.New(spy)
+	e := executor.NewExecutor(spy)
 
 	t.Run("echoes message", func(t *testing.T) {
 		got, err := e.Execute(cmd("echo", "hello world"))
@@ -145,7 +145,7 @@ func TestEcho(t *testing.T) {
 func TestSet(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		spy := &spyStorage{}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		got, err := e.Execute(cmd("set", "mykey", "myval"))
 		require.NoError(t, err)
@@ -160,7 +160,7 @@ func TestSet(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		spy := &spyStorage{setErr: errors.New("disk full")}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		_, err := e.Execute(cmd("set", "k", "v"))
 		assert.EqualError(t, err, "disk full")
@@ -168,7 +168,7 @@ func TestSet(t *testing.T) {
 
 	t.Run("wrong arg count", func(t *testing.T) {
 		spy := &spyStorage{}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		got, err := e.Execute(cmd("set", "onlykey"))
 		require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestSet(t *testing.T) {
 func TestGet(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		spy := &spyStorage{getVal: []byte("thevalue")}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		got, err := e.Execute(cmd("get", "mykey"))
 		require.NoError(t, err)
@@ -194,7 +194,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		spy := &spyStorage{getErr: errors.New("not found")}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		_, err := e.Execute(cmd("get", "k"))
 		assert.EqualError(t, err, "not found")
@@ -202,7 +202,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("wrong arg count", func(t *testing.T) {
 		spy := &spyStorage{}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		got, err := e.Execute(cmd("get"))
 		require.NoError(t, err)
@@ -214,7 +214,7 @@ func TestGet(t *testing.T) {
 func TestDel(t *testing.T) {
 	t.Run("single key", func(t *testing.T) {
 		spy := &spyStorage{delVal: 1}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		got, err := e.Execute(cmd("del", "k1"))
 		require.NoError(t, err)
@@ -228,7 +228,7 @@ func TestDel(t *testing.T) {
 
 	t.Run("multiple keys", func(t *testing.T) {
 		spy := &spyStorage{delVal: 3}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		got, err := e.Execute(cmd("del", "a", "b", "c"))
 		require.NoError(t, err)
@@ -240,7 +240,7 @@ func TestDel(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		spy := &spyStorage{delErr: errors.New("oops")}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		_, err := e.Execute(cmd("del", "k"))
 		assert.EqualError(t, err, "oops")
@@ -248,7 +248,7 @@ func TestDel(t *testing.T) {
 
 	t.Run("no keys", func(t *testing.T) {
 		spy := &spyStorage{}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		got, err := e.Execute(cmd("del"))
 		require.NoError(t, err)
@@ -260,7 +260,7 @@ func TestDel(t *testing.T) {
 func TestIncr(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		spy := &spyStorage{incrVal: 42}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		got, err := e.Execute(cmd("incr", "counter"))
 		require.NoError(t, err)
@@ -274,7 +274,7 @@ func TestIncr(t *testing.T) {
 
 	t.Run("storage error", func(t *testing.T) {
 		spy := &spyStorage{incrErr: errors.New("not an integer")}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		_, err := e.Execute(cmd("incr", "k"))
 		assert.EqualError(t, err, "not an integer")
@@ -282,7 +282,7 @@ func TestIncr(t *testing.T) {
 
 	t.Run("wrong arg count", func(t *testing.T) {
 		spy := &spyStorage{}
-		e := executor.New(spy)
+		e := executor.NewExecutor(spy)
 
 		got, err := e.Execute(cmd("incr"))
 		require.NoError(t, err)

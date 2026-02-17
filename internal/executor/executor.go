@@ -20,7 +20,7 @@ type Executor struct {
 	storage storage.Storage
 }
 
-func New(s storage.Storage) *Executor {
+func NewExecutor(s storage.Storage) *Executor {
 	return &Executor{storage: s}
 }
 
